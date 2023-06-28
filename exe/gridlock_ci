@@ -1,0 +1,72 @@
+#!/usr/bin/env ruby
+
+require 'rspec/core'
+require 'gridlock_ci'
+require 'optparse'
+
+def run_command
+  options = {}
+
+  OptionParser.new do |opts|
+    opts.banner = 'Usage: gridlock_ci run [flags] [rspec-args]'
+
+    opts.on('--run_id RUN_ID', 'Run ID to associate with [required]') do |r|
+      options[:run_id] = r
+    end
+
+    opts.on('--run_attempt RUN_ATTEMPT', 'Run attempt number [required]') do |r|
+      options[:run_attempt] = r
+    end
+
+    opts.on('--rspec \'rspec-options\'', 'Options to pass to rspec') do |r|
+      options[:rspec] = r
+    end
+  end.parse!
+
+  options
+end
+
+def enqueue_command
+  options = {}
+
+  OptionParser.new do |opts|
+    opts.banner = 'Usage: gridlock_ci enqueue [flags] [rspec-args]'
+
+    opts.on('--run_id RUN_ID', 'Run ID to associate with [required]') do |r|
+      options[:run_id] = r
+    end
+
+    opts.on('--run_attempt RUN_ATTEMPT', 'Run attempt number [required]') do |r|
+      options[:run_attempt] = r
+    end
+
+    opts.on('--spec-glob GLOB', 'Glob to find specs [default: spec/**/*_spec.rb]') do |r|
+      options[:spec_glob] = r
+    end
+  end.parse!
+
+  options
+end
+
+global = OptionParser.new do |opts|
+  opts.banner = 'Usage: gridlock_ci [command] [options]'
+  opts.separator ''
+  opts.separator "Commands:\n run\n enqueue"
+end
+
+global.order!
+command = ARGV.shift
+
+case command
+when 'run'
+  opts = run_command
+  rspec_opts = opts[:rspec] ? opts[:rspec].split : []
+  GridlockCi::Runner.new(opts[:run_id], opts[:run_attempt]).run(rspec_opts)
+when 'enqueue'
+  opts = enqueue_command
+  specs = Dir.glob(opts[:spec_glob] || 'spec/**/*_spec.rb')
+  GridlockCi::Client.new(opts[:run_id], opts[:run_attempt]).send_specs(specs)
+else
+  puts 'Command not found'
+  exit 1
+end
