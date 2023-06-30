@@ -14,11 +14,11 @@ module GridlockCi
 
       loop do
         spec = gridlock.next_spec
-        rspec_opts.insert(0, spec)
+        rspec_config_options = rspec_opts.dup.insert(0, spec)
 
         break if spec.nil?
 
-        options = RSpec::Core::ConfigurationOptions.new(rspec_opts)
+        options = RSpec::Core::ConfigurationOptions.new(rspec_config_options)
         rspec_runner = RSpec::Core::Runner.new(options)
 
         status_code = rspec_runner.run($stderr, $stdout)
@@ -55,6 +55,7 @@ module GridlockCi
       end
       RSpec.world.example_groups.clear
       RSpec.configuration.start_time = RSpec::Core::Time.now
+      RSpec.configuration.reset_filters
       RSpec.configuration.reset
     end
   end
