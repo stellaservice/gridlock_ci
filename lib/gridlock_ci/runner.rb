@@ -11,6 +11,7 @@ module GridlockCi
       gridlock = GridlockCi::Client.new(run_id, run_attempt)
       exitstatus = 0
       failed_specs = []
+      all_specs = []
 
       loop do
         spec = gridlock.next_spec
@@ -28,9 +29,11 @@ module GridlockCi
           failed_specs << spec
         end
 
+        all_specs << spec
         clear_rspec_examples
       end
 
+      print_summary(all_specs, failed_specs)
       return unless exitstatus.positive?
 
       enqueue_failed_specs(failed_specs)
@@ -57,6 +60,21 @@ module GridlockCi
       RSpec.configuration.start_time = RSpec::Core::Time.now
       RSpec.configuration.reset_filters
       RSpec.configuration.reset
+    end
+
+    def print_summary(all_specs, failed_specs)
+      summary = <<-SUMMARY
+      Completed: #{all_specs.count} spec files
+      Failed: #{failed_specs.count} spec files
+
+      Full Spec list:
+      #{all_specs.join(' ')}
+
+      Failed Spec Files:
+      #{failed_specs.join(' ')}
+      SUMMARY
+
+      puts summary unless ENV['GRIDLOCK_TEST_ENV']
     end
   end
 end
