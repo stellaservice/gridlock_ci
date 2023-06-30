@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "gridlock_ci"
+ENV['GRIDLOCK_TEST_ENV'] = 'true'
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
