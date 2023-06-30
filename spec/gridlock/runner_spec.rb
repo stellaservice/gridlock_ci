@@ -1,6 +1,6 @@
 RSpec.describe(GridlockCi::Runner) do
-  let(:run_id) { 1 }
-  let(:run_attempt) { 1 }
+  let(:run_id) { '1' }
+  let(:run_attempt) { '1' }
   let(:gridlock_client) { double('client') }
   let(:rspec_config) { double('rspec_config') }
   let(:rspec_runner) { double('rspec_runner', run: 0) }
@@ -62,7 +62,7 @@ RSpec.describe(GridlockCi::Runner) do
 
       it 'readds the failed spec to queue' do
         client = double('client')
-        allow(GridlockCi::Client).to receive(:new).with(run_id, run_attempt + 1) { client }
+        allow(GridlockCi::Client).to receive(:new).with(run_id, run_attempt.to_i + 1) { client }
 
         expect(client).to receive(:send_specs).with([fake_spec])
 

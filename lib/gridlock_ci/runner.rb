@@ -40,7 +40,7 @@ module GridlockCi
     private
 
     def enqueue_failed_specs(failed_specs)
-      gridlock = GridlockCi::Client.new(run_id, run_attempt + 1)
+      gridlock = GridlockCi::Client.new(run_id, run_attempt.to_i + 1)
 
       gridlock.send_specs(failed_specs)
     end
