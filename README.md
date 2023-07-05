@@ -8,7 +8,7 @@ Client gem to run RSpec via GridlockCi dynamic test splitting.  This client libr
 
 ## Usage
 
-Before parallel steps, enqueue all specs via `gridlock_ci enqeue`
+Before parallel steps, enqueue all specs via `gridlock_ci enqueue`
 ```sh
 bundle exec gridlock_ci enqueue --run_id ${{ github.run_id }} --run_attempt ${{ github.run_attempt }}
 ```
