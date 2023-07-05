@@ -66,7 +66,9 @@ RSpec.describe(GridlockCi::Runner) do
 
         expect(client).to receive(:send_specs).with([fake_spec])
 
-        expect(subject.run).to eq(1)
+        expect do
+          expect(subject.run).to eq(1)
+        end.to raise_error(SystemExit)
       end
     end
   end
