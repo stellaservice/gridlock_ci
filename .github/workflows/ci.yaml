@@ -1,0 +1,15 @@
+name: ci
+on:
+  workflow_call:
+
+jobs:
+  ci:
+    runs-on: ubuntu-22.04
+    container:
+      image: ruby:3.0.4-bullseye
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: bundle install
+      - name: Run specs
+        run: bundle exec rspec

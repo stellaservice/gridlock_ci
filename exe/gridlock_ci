@@ -32,16 +32,20 @@ def enqueue_command
   OptionParser.new do |opts|
     opts.banner = 'Usage: gridlock_ci enqueue [flags] [rspec-args]'
 
-    opts.on('--run_id RUN_ID', 'Run ID to associate with [required]') do |r|
-      options[:run_id] = r
+    opts.on('--run_id RUN_ID', 'Run ID to associate with [required]') do |o|
+      options[:run_id] = o
     end
 
-    opts.on('--run_attempt RUN_ATTEMPT', 'Run attempt number [required]') do |r|
-      options[:run_attempt] = r
+    opts.on('--run_attempt RUN_ATTEMPT', 'Run attempt number [required]') do |o|
+      options[:run_attempt] = o
     end
 
-    opts.on('--spec-glob GLOB', 'Glob to find specs [default: spec/**/*_spec.rb]') do |r|
-      options[:spec_glob] = r
+    opts.on('--spec-glob GLOB', 'Glob to find specs [default: spec/**/*_spec.rb]') do |o|
+      options[:spec_glob] = o
+    end
+
+    opts.on('--specs SPEC_FILES', 'List of specs to enqueue delimited by spaces. [ex: "spec/foo_spec.rb spec/bar_spec.rb"]') do |o|
+      options[:specs] = o
     end
   end.parse!
 
@@ -64,7 +68,13 @@ when 'run'
   GridlockCi::Runner.new(opts[:run_id], opts[:run_attempt]).run(rspec_opts)
 when 'enqueue'
   opts = enqueue_command
-  specs = Dir.glob(opts[:spec_glob] || 'spec/**/*_spec.rb')
+
+  specs = if opts[:specs]
+            opts[:specs].split
+          else
+            Dir.glob(opts[:spec_glob] || 'spec/**/*_spec.rb')
+          end
+
   GridlockCi::Client.new(opts[:run_id], opts[:run_attempt]).send_specs(specs)
 else
   puts 'Command not found'
