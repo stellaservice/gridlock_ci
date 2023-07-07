@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'rspec/core'
+require 'rspec_junit_formatter'
 require 'gridlock_ci'
 require 'optparse'
 
@@ -16,6 +17,10 @@ def run_command
 
     opts.on('--run_attempt RUN_ATTEMPT', 'Run attempt number [required]') do |r|
       options[:run_attempt] = r
+    end
+
+    opts.on('--junit-output FILE', 'Export rspec results in junit format to FILE') do |r|
+      options[:junit_output] = r
     end
 
     opts.on('--rspec \'rspec-options\'', 'Options to pass to rspec') do |r|
@@ -65,7 +70,8 @@ case command
 when 'run'
   opts = run_command
   rspec_opts = opts[:rspec] ? opts[:rspec].split : []
-  GridlockCi::Runner.new(opts[:run_id], opts[:run_attempt]).run(rspec_opts)
+  GridlockCi::Runner.new(opts[:run_id], opts[:run_attempt]).run(rspec_opts: rspec_opts,
+                                                                junit_output: opts[:junit_output])
 when 'enqueue'
   opts = enqueue_command
 
