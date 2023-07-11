@@ -4,6 +4,7 @@ require 'rspec/core'
 require 'rspec_junit_formatter'
 require 'json'
 require 'faraday'
+require 'faraday/retry'
 
 require_relative 'gridlock_ci/version'
 require_relative 'gridlock_ci/client'

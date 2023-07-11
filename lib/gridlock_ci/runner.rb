@@ -19,6 +19,7 @@ module GridlockCi
     def run(rspec_opts: [], junit_output: nil)
       gridlock = GridlockCi::Client.new(run_id, run_attempt)
       exitstatus = 0
+      failed_specs = []
 
       loop do
         spec = gridlock.next_spec
@@ -31,7 +32,10 @@ module GridlockCi
 
         status_code = rspec_runner.run($stderr, $stdout)
 
-        exitstatus = status_code if status_code.positive?
+        if status_code.positive?
+          exitstatus = status_code
+          failed_specs << spec
+        end
 
         collect_reporter_data
         clear_rspec_examples

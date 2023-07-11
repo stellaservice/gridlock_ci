@@ -25,7 +25,15 @@ module GridlockCi
     end
 
     def conn
+      retry_options = {
+        max: 2,
+        interval: 0.05,
+        interval_randomness: 0.5,
+        backoff_factor: 2
+      }
+
       Faraday.new(url: gridlock_ci_endpoint) do |f|
+        f.request :retry, retry_options
         f.request :json
         f.response :json
       end

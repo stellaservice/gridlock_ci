@@ -7,6 +7,22 @@ RSpec.describe(GridlockCi::Runner) do
   let(:rspec_config) { double('rspec_config') }
   let(:rspec_runner) { double('rspec_runner', run: 0) }
   let(:fake_spec) { 'spec/test_spec.foo' }
+  let(:reporter) do
+    class FakeReporter
+      attr_accessor :examples, :failed_examples
+
+      def initialize
+        @duration = 15.35
+        @examples = []
+        @failed_examples = []
+        @pending_examples = []
+        @non_example_exception_count = 0
+        @load_time = 3.5
+      end
+    end
+
+    FakeReporter.new
+  end
 
   subject { described_class.new(run_id, run_attempt) }
 
@@ -15,6 +31,17 @@ RSpec.describe(GridlockCi::Runner) do
       allow(gridlock_client).to receive(:next_spec).and_return(fake_spec, nil)
       allow(GridlockCi::Client).to receive(:new) { gridlock_client }
       allow(RSpec::Core::Runner).to receive(:new) { rspec_runner }
+      allow(RSpec).to receive(:configuration) do
+        double(
+          :configuration,
+          force: nil,
+          value_for: nil,
+          seed: 2345,
+          dry_run?: false,
+          color_enabled?: false,
+          reporter: reporter
+        )
+      end
     end
 
     context 'when no rspec opts given' do
@@ -43,7 +70,7 @@ RSpec.describe(GridlockCi::Runner) do
           rspec_config
         ) { rspec_runner }
 
-        subject.run(rspec_opts)
+        subject.run(rspec_opts: rspec_opts)
       end
     end
 
@@ -62,28 +89,6 @@ RSpec.describe(GridlockCi::Runner) do
     context 'when junit option is set' do
       let(:junit_output) { '/tmp/junit-test.xml' }
       let(:duration) { 15.35 }
-      let(:reporter) do
-        class FakeReporter
-          attr_reader :examples, :failed_examples, :pending_examples
-          def initialize
-            @duration = 15.35
-            @examples = []
-            @failed_examples = []
-            @pending_examples = []
-            @non_example_exception_count = 0
-            @load_time = 3.5
-          end
-        end
-
-        FakeReporter.new
-      end
-
-      before do
-        allow(RSpec).to receive(:configuration) do
-          double(:configuration, force: nil, value_for: nil, seed: 2345, dry_run?: false, reporter: reporter)
-        end
-      end
-
       after do
         File.delete(junit_output)
       end
