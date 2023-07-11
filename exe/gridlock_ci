@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'rspec/core'
-require 'rspec_junit_formatter'
 require 'gridlock_ci'
 require 'optparse'
 

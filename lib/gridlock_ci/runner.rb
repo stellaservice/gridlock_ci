@@ -7,12 +7,12 @@ module GridlockCi
       @run_attempt = run_attempt
       @start_time = Time.now
       @reporter_data = {
-        examples: [],
         duration: 0.0,
+        examples: [],
         failed_examples: [],
         pending_examples: [],
         load_time: 0.0,
-        errors_outside_of_examples_count: 0.0
+        non_example_exception_count: 0.0
       }
     end
 
@@ -55,6 +55,8 @@ module GridlockCi
     end
 
     def clear_rspec_examples
+      return if ENV['GRIDLOCK_TEST_ENV']
+
       if RSpec::ExampleGroups.respond_to?(:remove_all_constants)
         RSpec::ExampleGroups.remove_all_constants
       else
@@ -69,6 +71,8 @@ module GridlockCi
     end
 
     def print_summary
+      return if ENV['GRIDLOCK_TEST_ENV']
+
       summary = <<~SUMMARY
         ----------------------------------------------------------------------
         #{summary_notification.fully_formatted}
@@ -80,40 +84,23 @@ module GridlockCi
         #{summary_notification.failed_examples.map(&:file_path).uniq.join(' ')}
       SUMMARY
 
-      puts summary unless ENV['GRIDLOCK_TEST_ENV']
+      puts summary
     end
 
+    # Copy relevant data from RSpec::Core::Reporter each run before clearing
     def collect_reporter_data
       reporter = RSpec.configuration.reporter
-      @reporter_data[:duration] += reporter.instance_variable_get('@duration')
-      @reporter_data[:examples] += reporter.examples
-      @reporter_data[:failed_examples] += reporter.failed_examples
-      @reporter_data[:pending_examples] += reporter.pending_examples
-      @reporter_data[:load_time] += reporter.instance_variable_get('@load_time')
-      @reporter_data[:errors_outside_of_examples_count] += reporter.instance_variable_get('@non_example_exception_count')
+      @reporter_data.each_key do |key|
+        @reporter_data[key] += reporter.instance_variable_get("@#{key}")
+      end
     end
 
     def summary_notification
-      RSpec::Core::Notifications::SummaryNotification.new(
-        @reporter_data[:duration], @reporter_data[:examples],
-        @reporter_data[:failed_examples], @reporter_data[:pending_examples],
-        @reporter_data[:load_time], @reporter_data[:errors_outside_of_examples_count]
-      )
-    end
-
-    def example_notification(example)
-      RSpec::Core::Notifications::ExampleNotification.for(example)
+      RSpec::Core::Notifications::SummaryNotification.new(*@reporter_data.values)
     end
 
     def output_junit(file)
-      junit_formatter = RSpecJUnitFormatter.new(IO.new(IO.sysopen(file, 'w'), 'w'))
-      junit_formatter.instance_variable_set('@started', @start_time)
-      junit_formatter.instance_variable_set(
-        '@examples_notification',
-        Struct.new(:notifications).new(@reporter_data[:examples].map { |ex| example_notification(ex) })
-      )
-
-      junit_formatter.dump_summary(summary_notification)
+      JunitOutput.new(summary_notification, @start_time).output(file)
     end
   end
 end

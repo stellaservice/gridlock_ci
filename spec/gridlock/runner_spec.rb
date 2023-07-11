@@ -1,3 +1,5 @@
+require 'nokogiri'
+
 RSpec.describe(GridlockCi::Runner) do
   let(:run_id) { '1' }
   let(:run_attempt) { '1' }
@@ -54,6 +56,43 @@ RSpec.describe(GridlockCi::Runner) do
         expect(RSpec::Core::Runner).not_to receive(:new)
 
         subject.run
+      end
+    end
+
+    context 'when junit option is set' do
+      let(:junit_output) { '/tmp/junit-test.xml' }
+      let(:duration) { 15.35 }
+      let(:reporter) do
+        class FakeReporter
+          attr_reader :examples, :failed_examples, :pending_examples
+          def initialize
+            @duration = 15.35
+            @examples = []
+            @failed_examples = []
+            @pending_examples = []
+            @non_example_exception_count = 0
+            @load_time = 3.5
+          end
+        end
+
+        FakeReporter.new
+      end
+
+      before do
+        allow(RSpec).to receive(:configuration) do
+          double(:configuration, force: nil, value_for: nil, seed: 2345, dry_run?: false, reporter: reporter)
+        end
+      end
+
+      after do
+        File.delete(junit_output)
+      end
+
+      it 'creates junit output of results' do
+        subject.run(junit_output: junit_output)
+        xml_doc = Nokogiri::XML(File.read(junit_output))
+
+        expect(xml_doc.css('testsuite').first.attribute('time').content.to_f).to eq(duration)
       end
     end
 
