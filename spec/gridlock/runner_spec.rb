@@ -3,7 +3,7 @@ require 'nokogiri'
 RSpec.describe(GridlockCi::Runner) do
   let(:run_id) { '1' }
   let(:run_attempt) { '1' }
-  let(:gridlock_client) { double('client') }
+  let(:gridlock_client) { double('client', previous_run_completed?: true) }
   let(:rspec_config) { double('rspec_config') }
   let(:rspec_runner) { double('rspec_runner', run: 0) }
   let(:fake_spec) { 'spec/test_spec.foo' }
@@ -44,8 +44,8 @@ RSpec.describe(GridlockCi::Runner) do
       end
     end
 
-    context 'when no rspec opts given' do
-      it 'passes the resulting spec from the server to rspec runner' do
+    context 'when no opts given' do
+      it 'passes the next spec from the server to rspec runner' do
         expect(RSpec::Core::ConfigurationOptions).to receive(:new).with(
           [fake_spec]
         ) { rspec_config }
@@ -113,6 +113,14 @@ RSpec.describe(GridlockCi::Runner) do
         expect do
           expect(subject.run).to eq(1)
         end.to raise_error(SystemExit)
+      end
+    end
+
+    context 'when previous run is not completed' do
+      let(:gridlock_client) { double('client', previous_run_completed?: false) }
+      let(:run_attempt) { '2' }
+      it 'errors and asks to retry all specs' do
+        expect { subject.run }.to raise_error('Something is wrong, there are existing specs remaining in previous run.  Please retry all specs.')
       end
     end
   end
