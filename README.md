@@ -17,3 +17,15 @@ For each parallel runner, run rspec vis `gridlock_ci run`
 ```sh
 bundle exec gridlock_ci run --run_id ${{ github.run_id }} --run_attempt ${{ github.run_attempt }}
 ```
+
+## RSpec run options
+
+RSpec options may be passed via flags.
+
+Example: `--rspec '--tag=foo --format progress'`
+
+*Keep in mind some options may not work as intended because each spec file is run individually, and data is cleared between runs.  This will affect formatters final outputs and rspec options like `--profile`*
+
+## Junit output
+
+Junit output is supported via flag: `--junit-output FilePath`.  Do not use the RSpec formatter for the reasons explained above.
