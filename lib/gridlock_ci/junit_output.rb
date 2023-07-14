@@ -8,6 +8,8 @@ module GridlockCi
     end
 
     def output(file)
+      RSpec::Support::DirectoryMaker.mkdir_p(File.dirname(file))
+
       IO.open(IO.sysopen(file, 'w'), 'w') do |output|
         junit_formatter = RSpecJUnitFormatter.new(output)
         junit_formatter.instance_variable_set('@started', @start_time)
