@@ -11,7 +11,7 @@ module GridlockCi
       return true if run_attempt == 1
 
       previous_run_key = "#{run_id}_#{run_attempt - 1}"
-      results = conn.get("/spec_list/#{previous_run_key}")['spec_list']
+      results = conn.get("/spec_list/#{previous_run_key}").body['specs']
 
       return true if results.empty?
     end
