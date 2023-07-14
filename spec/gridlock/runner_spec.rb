@@ -1,10 +1,28 @@
+require 'nokogiri'
+
 RSpec.describe(GridlockCi::Runner) do
   let(:run_id) { '1' }
   let(:run_attempt) { '1' }
-  let(:gridlock_client) { double('client') }
+  let(:gridlock_client) { double('client', previous_run_completed?: true) }
   let(:rspec_config) { double('rspec_config') }
   let(:rspec_runner) { double('rspec_runner', run: 0) }
   let(:fake_spec) { 'spec/test_spec.foo' }
+  let(:reporter) do
+    class FakeReporter
+      attr_accessor :examples, :failed_examples
+
+      def initialize
+        @duration = 15.35
+        @examples = []
+        @failed_examples = []
+        @pending_examples = []
+        @non_example_exception_count = 0
+        @load_time = 3.5
+      end
+    end
+
+    FakeReporter.new
+  end
 
   subject { described_class.new(run_id, run_attempt) }
 
@@ -13,10 +31,21 @@ RSpec.describe(GridlockCi::Runner) do
       allow(gridlock_client).to receive(:next_spec).and_return(fake_spec, nil)
       allow(GridlockCi::Client).to receive(:new) { gridlock_client }
       allow(RSpec::Core::Runner).to receive(:new) { rspec_runner }
+      allow(RSpec).to receive(:configuration) do
+        double(
+          :configuration,
+          force: nil,
+          value_for: nil,
+          seed: 2345,
+          dry_run?: false,
+          color_enabled?: false,
+          reporter: reporter
+        )
+      end
     end
 
-    context 'when no rspec opts given' do
-      it 'passes the resulting spec from the server to rspec runner' do
+    context 'when no opts given' do
+      it 'passes the next spec from the server to rspec runner' do
         expect(RSpec::Core::ConfigurationOptions).to receive(:new).with(
           [fake_spec]
         ) { rspec_config }
@@ -41,7 +70,7 @@ RSpec.describe(GridlockCi::Runner) do
           rspec_config
         ) { rspec_runner }
 
-        subject.run(rspec_opts)
+        subject.run(rspec_opts: rspec_opts)
       end
     end
 
@@ -57,6 +86,21 @@ RSpec.describe(GridlockCi::Runner) do
       end
     end
 
+    context 'when junit option is set' do
+      let(:junit_output) { '/tmp/junit-test.xml' }
+      let(:duration) { 15.35 }
+      after do
+        File.delete(junit_output)
+      end
+
+      it 'creates junit output of results' do
+        subject.run(junit_output: junit_output)
+        xml_doc = Nokogiri::XML(File.read(junit_output))
+
+        expect(xml_doc.css('testsuite').first.attribute('time').content.to_f).to eq(duration)
+      end
+    end
+
     context 'when spec failed' do
       let(:rspec_runner) { double('rspec_runner', run: 1) }
 
@@ -69,6 +113,14 @@ RSpec.describe(GridlockCi::Runner) do
         expect do
           expect(subject.run).to eq(1)
         end.to raise_error(SystemExit)
+      end
+    end
+
+    context 'when previous run is not completed' do
+      let(:gridlock_client) { double('client', previous_run_completed?: false) }
+      let(:run_attempt) { '2' }
+      it 'errors and asks to retry all specs' do
+        expect { subject.run }.to raise_error('Something is wrong, there are existing specs remaining in previous run.  Please retry all specs.')
       end
     end
   end

@@ -5,38 +5,54 @@ module GridlockCi
     def initialize(run_id, run_attempt)
       @run_id = run_id
       @run_attempt = run_attempt
+      @start_time = Time.now
+      @reporter_data = {
+        duration: 0.0,
+        examples: [],
+        failed_examples: [],
+        pending_examples: [],
+        load_time: 0.0,
+        non_example_exception_count: 0.0
+      }
     end
 
-    def run(rspec_opts = [])
-      gridlock = GridlockCi::Client.new(run_id, run_attempt)
-      exitstatus = 0
-      failed_specs = []
-      all_specs = []
+    def run(rspec_opts: [], junit_output: nil)
+      begin
+        exitstatus = 0
+        failed_specs = []
+        gridlock = GridlockCi::Client.new(run_id, run_attempt)
 
-      loop do
-        spec = gridlock.next_spec
-        rspec_config_options = rspec_opts.dup.insert(0, spec)
+        gridlock.previous_run_completed? ||
+          (raise 'Something is wrong, there are existing specs remaining in previous run.  Please retry all specs.')
 
-        break if spec.nil?
+        loop do
+          spec = gridlock.next_spec
+          rspec_config_options = rspec_opts.dup.insert(0, spec)
 
-        options = RSpec::Core::ConfigurationOptions.new(rspec_config_options)
-        rspec_runner = RSpec::Core::Runner.new(options)
+          break if spec.nil?
 
-        status_code = rspec_runner.run($stderr, $stdout)
+          options = RSpec::Core::ConfigurationOptions.new(rspec_config_options)
+          rspec_runner = RSpec::Core::Runner.new(options)
 
-        if status_code.positive?
-          exitstatus = status_code
-          failed_specs << spec
+          status_code = rspec_runner.run($stderr, $stdout)
+
+          if status_code.positive?
+            exitstatus = status_code
+            failed_specs << spec
+          end
+
+          collect_reporter_data
+          clear_rspec_examples
         end
 
-        all_specs << spec
-        clear_rspec_examples
+        print_summary
+        output_junit(junit_output) if junit_output
+
+        return unless exitstatus.positive?
+      ensure
+        enqueue_failed_specs(failed_specs) unless failed_specs.empty?
       end
 
-      print_summary(all_specs, failed_specs)
-      return unless exitstatus.positive?
-
-      enqueue_failed_specs(failed_specs)
       exit exitstatus
     end
 
@@ -49,6 +65,8 @@ module GridlockCi
     end
 
     def clear_rspec_examples
+      return if ENV['GRIDLOCK_TEST_ENV']
+
       if RSpec::ExampleGroups.respond_to?(:remove_all_constants)
         RSpec::ExampleGroups.remove_all_constants
       else
@@ -62,19 +80,37 @@ module GridlockCi
       RSpec.configuration.reset
     end
 
-    def print_summary(all_specs, failed_specs)
-      summary = <<-SUMMARY
-      Completed: #{all_specs.count} spec files
-      Failed: #{failed_specs.count} spec files
+    def print_summary
+      return if ENV['GRIDLOCK_TEST_ENV']
 
-      Full Spec list:
-      #{all_specs.join(' ')}
+      summary = <<~SUMMARY
+        ----------------------------------------------------------------------
+        #{summary_notification.fully_formatted}
 
-      Failed Spec Files:
-      #{failed_specs.join(' ')}
+        Full Spec list:
+        #{summary_notification.examples.map(&:file_path).uniq.join(' ')}
+
+        Failed Spec Files:
+        #{summary_notification.failed_examples.map(&:file_path).uniq.join(' ')}
       SUMMARY
 
-      puts summary unless ENV['GRIDLOCK_TEST_ENV']
+      puts summary
+    end
+
+    # Copy relevant data from RSpec::Core::Reporter each run before clearing
+    def collect_reporter_data
+      reporter = RSpec.configuration.reporter
+      @reporter_data.each_key do |key|
+        @reporter_data[key] += reporter.instance_variable_get("@#{key}")
+      end
+    end
+
+    def summary_notification
+      RSpec::Core::Notifications::SummaryNotification.new(*@reporter_data.values)
+    end
+
+    def output_junit(file)
+      JunitOutput.new(summary_notification, @start_time).output(file)
     end
   end
 end
