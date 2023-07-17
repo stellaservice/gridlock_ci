@@ -19,6 +19,7 @@ module GridlockCi
     def run(rspec_opts: [], junit_output: nil)
       begin
         exitstatus = 0
+        all_specs = []
         failed_specs = []
         gridlock = GridlockCi::Client.new(run_id, run_attempt)
 
@@ -27,10 +28,11 @@ module GridlockCi
 
         loop do
           spec = gridlock.next_spec
-          rspec_config_options = rspec_opts.dup.insert(0, spec)
 
           break if spec.nil?
 
+          all_specs << spec
+          rspec_config_options = rspec_opts.dup.insert(0, spec)
           options = RSpec::Core::ConfigurationOptions.new(rspec_config_options)
           rspec_runner = RSpec::Core::Runner.new(options)
 
@@ -45,7 +47,7 @@ module GridlockCi
           clear_rspec_examples
         end
 
-        print_summary
+        print_summary(all_specs, failed_specs)
         output_junit(junit_output) if junit_output
 
         return unless exitstatus.positive?
@@ -80,7 +82,7 @@ module GridlockCi
       RSpec.configuration.reset
     end
 
-    def print_summary
+    def print_summary(all_specs, failed_specs)
       return if ENV['GRIDLOCK_TEST_ENV']
 
       summary = <<~SUMMARY
@@ -88,10 +90,10 @@ module GridlockCi
         #{summary_notification.fully_formatted}
 
         Full Spec list:
-        #{summary_notification.examples.map(&:file_path).uniq.join(' ')}
+        #{all_specs.join(' ')}
 
         Failed Spec Files:
-        #{summary_notification.failed_examples.map(&:file_path).uniq.join(' ')}
+        #{failed_specs.join(' ')}
       SUMMARY
 
       puts summary
