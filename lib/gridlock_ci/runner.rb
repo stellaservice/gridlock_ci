@@ -21,18 +21,19 @@ module GridlockCi
         exitstatus = 0
         all_specs = []
         failed_specs = []
+        pending_spec = nil
         gridlock = GridlockCi::Client.new(run_id, run_attempt)
 
         gridlock.previous_run_completed? ||
           (raise 'Something is wrong, there are existing specs remaining in previous run.  Please retry all specs.')
 
         loop do
-          spec = gridlock.next_spec
+          pending_spec = gridlock.next_spec
 
-          break if spec.nil?
+          break if pending_spec.nil?
 
-          all_specs << spec
-          rspec_config_options = rspec_opts.dup.insert(0, spec)
+          all_specs << pending_spec
+          rspec_config_options = rspec_opts.dup.insert(0, pending_spec)
           options = RSpec::Core::ConfigurationOptions.new(rspec_config_options)
           rspec_runner = RSpec::Core::Runner.new(options)
 
@@ -40,9 +41,10 @@ module GridlockCi
 
           if status_code.positive?
             exitstatus = status_code
-            failed_specs << spec
+            failed_specs << pending_spec
           end
 
+          pending_spec = nil
           collect_reporter_data
           clear_rspec_examples
         end
@@ -52,6 +54,7 @@ module GridlockCi
 
         return unless exitstatus.positive?
       ensure
+        failed_specs << pending_spec if pending_spec
         enqueue_failed_specs(failed_specs) unless failed_specs.empty?
       end
 
