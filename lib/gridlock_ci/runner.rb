@@ -12,7 +12,7 @@ module GridlockCi
         failed_examples: [],
         pending_examples: [],
         load_time: 0.0,
-        non_example_exception_count: 0.0
+        non_example_exception_count: 0
       }
     end
 
