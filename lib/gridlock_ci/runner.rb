@@ -37,6 +37,7 @@ module GridlockCi
           options = RSpec::Core::ConfigurationOptions.new(rspec_config_options)
           rspec_runner = RSpec::Core::Runner.new(options)
 
+          puts "Running: #{pending_spec}"
           status_code = rspec_runner.run($stderr, $stdout)
 
           if status_code.positive?
