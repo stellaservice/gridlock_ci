@@ -29,3 +29,11 @@ Example: `--rspec '--tag=foo --format progress'`
 ## Junit output
 
 Junit output is supported via flag: `--junit-output FilePath`.  Do not use the RSpec formatter for the reasons explained above.
+
+## Upload results
+
+Results can be uploaded to the server for analysis
+
+```sh
+bundle exec gridlock_ci upload_results --run_id 1 --run_attempt 1 --file_path FilePath
+```

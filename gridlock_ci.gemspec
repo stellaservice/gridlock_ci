@@ -32,6 +32,7 @@ Gem::Specification.new do |spec|
 
   # Uncomment to register a new dependency of your gem
   spec.add_dependency 'faraday', '~> 2.7'
+  spec.add_dependency 'faraday-multipart', '~> 1.0'
   spec.add_dependency 'faraday-retry', '~> 2.2'
   spec.add_dependency 'rspec-core', '~> 3.12'
   spec.add_dependency 'rspec_junit_formatter', '~> 0.6'

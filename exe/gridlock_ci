@@ -55,10 +55,32 @@ def enqueue_command
   options
 end
 
+def upload_results_command
+  options = {}
+
+  OptionParser.new do |opts|
+    opts.banner = 'Usage: gridlock_ci upload_results [flags]'
+
+    opts.on('--run_id RUN_ID', 'Run ID to associate with [required]') do |o|
+      options[:run_id] = o
+    end
+
+    opts.on('--run_attempt RUN_ATTEMPT', 'Run attempt number [required]') do |o|
+      options[:run_attempt] = o
+    end
+
+    opts.on('--file_path FILE_PATH', 'Path to results file [required]') do |o|
+      options[:file_path] = o
+    end
+  end.parse!
+
+  options
+end
+
 global = OptionParser.new do |opts|
   opts.banner = 'Usage: gridlock_ci [command] [options]'
   opts.separator ''
-  opts.separator "Commands:\n run\n enqueue"
+  opts.separator "Commands:\n run\n enqueue\n upload_results"
 end
 
 global.order!
@@ -80,6 +102,10 @@ when 'enqueue'
           end
 
   GridlockCi::Client.new(opts[:run_id], opts[:run_attempt]).send_specs(specs)
+when 'upload_results'
+  opts = upload_results_command
+
+  GridlockCi::Client.new(opts[:run_id], opts[:run_attempt]).upload_results(opts[:file_path])
 else
   puts 'Command not found'
   exit 1
