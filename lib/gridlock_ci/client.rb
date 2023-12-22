@@ -29,9 +29,10 @@ module GridlockCi
 
     def upload_results(file_path)
       file = Faraday::Multipart::FilePart.new(file_path, 'text/xml')
-      payload = { file: file }
+      payload = { file: file, data: { test_type: 'ruby' }.to_json }
 
-      multipart_conn.post("/spec_results/#{run_key}", payload)
+      response = multipart_conn.post("/spec_results/#{run_key}", payload)
+      puts response.body
     end
 
     private
