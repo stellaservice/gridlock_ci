@@ -13,7 +13,7 @@ module GridlockCi
       previous_run_key = "#{run_id}_#{run_attempt - 1}"
       results = conn.get("/spec_list/#{previous_run_key}").body['specs']
 
-      return true if results.empty?
+      true if results.empty?
     end
 
     def next_spec
@@ -25,6 +25,14 @@ module GridlockCi
       result = conn.post("/spec_list/#{run_key}", spec_list_json).body
 
       raise result['status'] if result['status'] != 'success'
+    end
+
+    def upload_results(file_path)
+      file = Faraday::Multipart::FilePart.new(file_path, 'text/xml')
+      payload = { file: file, data: { test_type: 'ruby' }.to_json }
+
+      response = multipart_conn.post("/spec_results/#{run_key}", payload)
+      puts response.body
     end
 
     private
@@ -44,6 +52,14 @@ module GridlockCi
       Faraday.new(url: gridlock_ci_endpoint) do |f|
         f.request :retry, retry_options
         f.request :json
+        f.response :json
+        f.response :raise_error
+      end
+    end
+
+    def multipart_conn
+      Faraday.new(url: gridlock_ci_endpoint, request: { timeout: 15 }) do |f|
+        f.request :multipart
         f.response :json
         f.response :raise_error
       end
