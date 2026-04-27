@@ -55,6 +55,30 @@ def enqueue_command
   options
 end
 
+def reproduce_command
+  options = {}
+
+  OptionParser.new do |opts|
+    opts.banner = 'Usage: gridlock_ci reproduce [flags] spec1 spec2 ...'
+
+    opts.on('--seed SEED', 'RSpec seed to use for all specs') do |o|
+      options[:seed] = o
+    end
+
+    opts.on('--junit-output FILE', 'Export rspec results in junit format to FILE') do |o|
+      options[:junit_output] = o
+    end
+
+    opts.on('--rspec \'rspec-options\'', 'Options to pass to rspec') do |o|
+      options[:rspec] = o
+    end
+  end.parse!
+
+  options[:specs] = ARGV.shift(ARGV.size)
+
+  options
+end
+
 def upload_results_command
   options = {}
 
@@ -80,7 +104,7 @@ end
 global = OptionParser.new do |opts|
   opts.banner = 'Usage: gridlock_ci [command] [options]'
   opts.separator ''
-  opts.separator "Commands:\n run\n enqueue\n upload_results"
+  opts.separator "Commands:\n run\n enqueue\n upload_results\n reproduce"
 end
 
 global.order!
@@ -106,6 +130,15 @@ when 'upload_results'
   opts = upload_results_command
 
   GridlockCi::Client.new(opts[:run_id], opts[:run_attempt]).upload_results(opts[:file_path])
+when 'reproduce'
+  opts = reproduce_command
+  specs = opts[:specs]
+  rspec_opts = opts[:rspec] ? opts[:rspec].split : []
+  rspec_opts += ['--seed', opts[:seed]] if opts[:seed]
+  reproduce_client = GridlockCi::ReproduceClient.new(specs, opts[:seed])
+  GridlockCi::Runner.new(1, 1).run(rspec_opts: rspec_opts,
+                                   junit_output: opts[:junit_output],
+                                   client: reproduce_client)
 else
   puts 'Command not found'
   exit 1
