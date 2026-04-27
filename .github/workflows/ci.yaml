@@ -6,7 +6,7 @@ jobs:
   ci:
     runs-on: ubuntu-22.04
     container:
-      image: ruby:3.0.4-bullseye
+      image: ruby:3.3.11-bookworm
     steps:
       - uses: actions/checkout@v3
       - name: Install dependencies
