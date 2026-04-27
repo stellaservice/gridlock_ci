@@ -16,13 +16,13 @@ module GridlockCi
       }
     end
 
-    def run(rspec_opts: [], junit_output: nil)
+    def run(rspec_opts: [], junit_output: nil, client: nil)
       begin
         exitstatus = 0
         all_specs = []
         failed_specs = []
         pending_spec = nil
-        gridlock = GridlockCi::Client.new(run_id, run_attempt)
+        gridlock = client || GridlockCi::Client.new(run_id, run_attempt)
 
         gridlock.previous_run_completed? ||
           (raise 'Something is wrong, there are existing specs remaining in previous run.  Please retry all specs.')

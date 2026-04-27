@@ -9,6 +9,7 @@ require 'faraday/multipart'
 
 require_relative 'gridlock_ci/version'
 require_relative 'gridlock_ci/client'
+require_relative 'gridlock_ci/reproduce_client'
 require_relative 'gridlock_ci/junit_output'
 require_relative 'gridlock_ci/runner'
 
